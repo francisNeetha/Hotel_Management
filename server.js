@@ -11,7 +11,7 @@ const connection = mysql.createConnection({
 
 connection.connect();
 
-app.get("/", (req, res, next) => {
+app.get("/", (req, res) => {
     connection.query(`SELECT * FROM customers`, function (err, rows, fields) {
         console.log("Connection result error " + err);
         console.log("no of records is " + rows.length);
