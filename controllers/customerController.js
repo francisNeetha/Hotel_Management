@@ -14,7 +14,7 @@ const customers = (req, res) =>{
 
 const addCustomer = (req, res) => {
     const data = req.body;
-    if (!data.name || !data.email || !data.phone) {
+    if (!data.name || !data.email || !data.phone || data.address) {
         return res.status(400).json({ error: "All fields are required." });
     }
 
@@ -22,7 +22,7 @@ const addCustomer = (req, res) => {
         if (err) {
             return res.status(500).json({ error: "Failed to add customer." });
         }
-        res.status(201).json({ message: "Customer added successfully", customerId: result.insertId });
+        res.status(200).json({ message: "Customer added successfully", customerId: result.insertId });
     });
 };
 
@@ -92,7 +92,8 @@ const updateCustomer = (req, res) => {
 
 
 
-module.exports = {customers, addCustomer,
+module.exports = {customers,
+    addCustomer,
     deleteCustomer,
     updateCustomer
 };

@@ -1,4 +1,4 @@
-const customerModel = require("../models/customerModel"); // Adjust the import if necessary
+const customerModel = require("../models/customerModel"); 
 const customerController = require("../controllers/customerController");
 
 jest.mock("../models/customerModel"); 
