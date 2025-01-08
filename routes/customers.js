@@ -4,6 +4,8 @@ const customerController = require("../controllers/customerController");
 
 router.get("/", customerController.customers);
 
+router.get("/:id", customerController.getCustomerById);
+
 router.post("/", customerController.addCustomer);
 
 router.delete("/:id", customerController.deleteCustomer);

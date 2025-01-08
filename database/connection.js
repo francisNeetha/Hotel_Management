@@ -11,10 +11,10 @@ const connection = mysql.createConnection({
 connection.connect();
 
 const closeConnection = () => {
-    if (connection && connection.end) {
+    if (connection) {
         connection.end();
     }
 };
 
 
-module.exports = {connection, closeConnection};
+module.exports = { connection, closeConnection };

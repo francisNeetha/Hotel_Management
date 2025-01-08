@@ -3,6 +3,13 @@ const customerController = require("../controllers/customerController");
 
 jest.mock("../models/customerModel"); 
 
+afterEach(() => {
+    jest.clearAllMocks();
+});
+
+afterAll(() => {
+    jest.resetAllMocks();
+});
 
 describe("Customer Controller Tests", () => {
     it("should fetch all customers", () => {
@@ -43,8 +50,49 @@ describe("Customer Controller Tests", () => {
         expect(res.json).toHaveBeenCalledWith({ error: "Failed to fetch customers." });
     });
 
+    it("should retrieve a customer by ID successfully", () => {
+        const mockId = 1;
+        const mockResult = [
+            { id: mockId, name: "John Doe", email: "john@example.com", phone: "1234567890", address: "meskatu 45" }
+        ];
+
+        customerModel.getCustomerById.mockImplementation((id, callback) => {
+            callback(null, mockResult);
+        });
+
+        const req = { params: { id: mockId } };
+        const res = {
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn(),
+        };
+
+        customerController.getCustomerById(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith(mockResult[0]);
+    });
+
+    it("should return an error when database fails", () => {
+        const mockId = 1;
+
+        customerModel.getCustomerById.mockImplementation((id, callback) => {
+            callback(new Error("Database error"), null);
+        });
+
+        const req = { params: { id: mockId } };
+        const res = {
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn(),
+        };
+
+        customerController.getCustomerById(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({ error: "Failed to retrieve customer." });
+    });
+
     it("should add a new customer successfully", () => {
-        const mockData = { name: "John Doe", email: "john@example.com", phone: "9876543210" };
+        const mockData = { name: "John Doe", email: "john@example.com", phone: "9876543210", address: "meskatu 45" };
         const mockResult = { insertId: 1 };
 
         customerModel.addCustomer.mockImplementation((data, callback) => {
@@ -61,10 +109,11 @@ describe("Customer Controller Tests", () => {
 
         expect(res.status).toHaveBeenCalledWith(201);
         expect(res.json).toHaveBeenCalledWith({ message: "Customer added successfully", customerId: 1 });
+        
     });
 
     it("should return an error when adding a customer fails", () => {
-        const mockData = { name: "John Doe", email: "john@example.com", phone: "9876543210" };
+        const mockData = { name: "John Doe", email: "john@example.com", phone: "9876543210", address: "meskatu 45" };
 
         customerModel.addCustomer.mockImplementation((data, callback) => {
             callback(new Error("Database error"), null);
@@ -143,7 +192,7 @@ describe("Customer Controller Tests", () => {
 
     it("should update a customer's details successfully", () => {
         const mockId = 1;
-        const mockData = { name: "Updated Customer", email: "updated@example.com", phone: "1234567890" };
+        const mockData = { name: "Updated Customer", email: "updated@example.com", phone: "1234567890",address: "mesatu 45" };
         const mockResult = { affectedRows: 1 };
 
         customerModel.updateCustomer.mockImplementation((id, data, callback) => {
@@ -164,7 +213,7 @@ describe("Customer Controller Tests", () => {
 
     it("should return an error when updating a customer fails", () => {
         const mockId = 1;
-        const mockData = { name: "Updated Customer", email: "updated@example.com", phone: "1234567890" };
+        const mockData = { name: "Updated Customer", email: "updated@example.com", phone: "1234567890", address: "meskatu 45" };
 
         customerModel.updateCustomer.mockImplementation((id, data, callback) => {
             callback(new Error("Database error"), null);
@@ -180,5 +229,22 @@ describe("Customer Controller Tests", () => {
 
         expect(res.status).toHaveBeenCalledWith(500);
         expect(res.json).toHaveBeenCalledWith({ error: "Failed to update customer." });
+    }); 
+    
+    it("should return an error when updating a customer with no data", () => {
+        const mockId = 1;
+        const mockData = {}; 
+    
+        const req = { params: { id: mockId }, body: mockData };
+        const res = {
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn(),
+        };
+    
+        customerController.updateCustomer(req, res);
+    
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith({ error: "At least one field is required to update." });
     });
+    
 });

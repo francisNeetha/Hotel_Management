@@ -25,7 +25,23 @@ describe("Customer Model Tests", () => {
       callback(null, mockData);
     });
   
-    await customerModel.customers((err, result) => {
+    customerModel.customers((err, result) => {
+      expect(err).toBeNull();
+      expect(result).toEqual(mockData);
+    });
+  });
+
+  it("should fetch a customer by ID", () => {
+    const customerId = 3;
+    const mockData = [
+      { id: customerId, name: "Greasy Burger", email: "Greasy@gmail.com", phone: "9986665452", address: "Keskuskatu 45" },
+    ];
+
+    mysql.createConnection().query.mockImplementation((query, values, callback) => {
+      callback(null, mockData);
+    });
+
+    customerModel.getCustomerById(customerId, (err, result) => {
       expect(err).toBeNull();
       expect(result).toEqual(mockData);
     });
