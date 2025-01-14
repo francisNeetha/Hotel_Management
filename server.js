@@ -4,8 +4,11 @@ const app = express();
 app.disable('x-powered-by');
 
 const customerRoute = require("./routes/customers");
+
 app.use(express.json());
+
 app.use("/customers", customerRoute);
+
 app.get("/", (req, res, next) => {
     res.send("Home Page");
 });
