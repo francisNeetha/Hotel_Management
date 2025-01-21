@@ -104,6 +104,21 @@ const getCustomerByEmail = (email, callback) => {
     });
 };
 
+// Admin to get all the booking details
+const getBookings = (callback) => {
+    connection.query("SELECT * FROM booking", callback);
+};
+
+// Customers to get their own booking details
+const getBookingsByCustomerId = (customerId, callback) => {
+    connection.query(
+        "SELECT * FROM booking WHERE customer_id = ?",
+        [customerId],
+        callback
+    );
+};
+
+
 module.exports = {
     customers,
     getCustomerById,
@@ -114,5 +129,7 @@ module.exports = {
    getCustomerByEmail,
    getAllCustomers, 
    addCustomers, 
-    createBooking
+    createBooking,
+    getBookings,
+    getBookingsByCustomerId,  
 };

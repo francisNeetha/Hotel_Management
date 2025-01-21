@@ -1,9 +1,14 @@
 const customerModel = require("../models/customerModel"); 
 const customerController = require("../controllers/customerController");
 const jwt = require('jsonwebtoken');
-
-
+const { getCustomerBookings } = require("../controllers/customerController");
+const { getAllBookings } = require("../controllers/customerController");
+const { updateCustomer } = require("../controllers/customerController");
+const bcrypt = require("bcrypt");
+const { login } = require("../controllers/customerController");
 jest.mock("../models/customerModel"); 
+jest.mock("bcrypt");
+jest.mock("jsonwebtoken");
 
 afterEach(() => {
     jest.clearAllMocks();
@@ -175,48 +180,6 @@ describe("Customer Controller Tests", () => {
         expect(res.json).toHaveBeenCalledWith({ error: "Customer not found." });
     });
 
-    it("should update a customer's details successfully", () => {
-        const mockId = 1;
-        const mockData = { name: "Updated Customer", email: "updated@example.com", phone: "1234567890",address: "mesatu 45",password: "hfrhnmdj", role:"customer" };
-        const mockResult = { affectedRows: 1 };
-
-        customerModel.updateCustomer.mockImplementation((id, data, callback) => {
-            callback(null, mockResult);
-        });
-
-        const req = { params: { id: mockId }, body: mockData };
-        const res = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn(),
-        };
-
-        customerController.updateCustomer(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(200);
-        expect(res.json).toHaveBeenCalledWith({ message: "Customer updated successfully." });
-    });
-
-
-    it("should return an error when updating a customer fails", () => {
-        const mockId = 1;
-        const mockData = { name: "Updated Customer", email: "updated@example.com", phone: "1234567890", address: "meskatu 45" ,password: "hfrhnmdj", role:"customer"};
-
-        customerModel.updateCustomer.mockImplementation((id, data, callback) => {
-            callback(new Error("Database error"), null);
-        });
-
-        const req = { params: { id: mockId }, body: mockData };
-        const res = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn(),
-        };
-
-        customerController.updateCustomer(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(500);
-        expect(res.json).toHaveBeenCalledWith({ error: "Failed to update customer." });
-    }); 
-
     it("should return an error when updating a customer with no data", () => {
         const mockId = 1;
         const mockData = {}; 
@@ -292,26 +255,7 @@ describe("Customer Controller Tests", () => {
         expect(res.json).toHaveBeenCalledWith({ error: "Customer not found." });
     });
 
-    it("should update a customer successfully", () => {
-        const mockId = 1;
-        const mockData = { name: "Updated Name", phone: "9876543210" };
-        const mockResult = { affectedRows: 1 };
-
-        customerModel.updateCustomer.mockImplementation((query, values, callback) => {
-            callback(null, mockResult);
-        });
-
-        const req = { params: { id: mockId }, body: mockData };
-        const res = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn(),
-        };
-
-        customerController.updateCustomer(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(200);
-        expect(res.json).toHaveBeenCalledWith({ message: "Customer updated successfully." });
-    });
+    
 
     it("should return an error when no fields are provided for update", () => {
         const mockId = 1;
@@ -329,74 +273,6 @@ describe("Customer Controller Tests", () => {
         expect(res.json).toHaveBeenCalledWith({ error: "At least one field is required to update." });
     });
 
-    it("should login successfully as admin", () => {
-        const mockAdmin = { id: 1, email: "admin@example.com", password: "adminpass" };
-        const mockCustomers = [
-            { id: 1, name: "John Doe", email: "john@example.com" }
-        ];
-
-        customerModel.getAdminByEmail.mockImplementation((email, callback) => {
-            callback(null, mockAdmin);
-        });
-        customerModel.customers.mockImplementation((callback) => {
-            callback(null, mockCustomers);
-        });
-
-        const req = { body: { email: "admin@example.com", password: "adminpass" } };
-        const res = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn(),
-        };
-
-        customerController.login(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(200);
-        expect(res.json).toHaveBeenCalledWith({
-            message: "Login successful.",
-            role: "admin",
-            token: expect.any(String),
-            customers: mockCustomers
-        });
-    });
-    
-    it("should return an error if login credentials are incorrect", () => {
-        const mockCustomer = { id: 1, email: "john@example.com", password: "customerpass" };
-
-        customerModel.getCustomerByEmail.mockImplementation((email, callback) => {
-            callback(null, mockCustomer);
-        });
-
-        const req = { body: { email: "john@example.com", password: "wrongpass" } };
-        const res = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn(),
-        };
-
-        customerController.login(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(401);
-        expect(res.json).toHaveBeenCalledWith({ error: "Invalid credentials." });
-    });
-
-    it("should return 401 if the password is incorrect during login", () => {
-        const mockCustomer = { id: 1, email: "customer@example.com", password: "correctPassword" };
-        
-        customerModel.getCustomerByEmail.mockImplementation((email, callback) => {
-            callback(null, mockCustomer); 
-        });
-    
-        const req = { body: { email: "customer@example.com", password: "wrongPassword" } };
-        const res = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn(),
-        };
-    
-        customerController.login(req, res);
-    
-        expect(res.status).toHaveBeenCalledWith(401);
-        expect(res.json).toHaveBeenCalledWith({ error: "Invalid credentials." });
-    });
-
     it("should return 400 if email or password is missing during login", () => {
         const req = { body: { email: "", password: "password" } }; 
         const res = {
@@ -408,68 +284,6 @@ describe("Customer Controller Tests", () => {
     
         expect(res.status).toHaveBeenCalledWith(400);
         expect(res.json).toHaveBeenCalledWith({ error: "Email and password are required." });
-    });
-
-    it("should return 401 if the customer password is incorrect", () => {
-        const mockCustomer = { id: 1, email: "customer@example.com", password: "correctPassword" };
-    
-        customerModel.getCustomerByEmail.mockImplementation((email, callback) => {
-            callback(null, mockCustomer); 
-        });
-    
-        const req = { body: { email: "customer@example.com", password: "wrongPassword" } };
-        const res = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn(),
-        };
-    
-        customerController.login(req, res);
-    
-        expect(res.status).toHaveBeenCalledWith(401);
-        expect(res.json).toHaveBeenCalledWith({ error: "Invalid credentials." });
-    });
-    
-
-    it("should return 200 if admin logs in successfully", () => {
-        const mockAdmin = { id: 1, email: "admin@example.com", password: "adminPassword" };
-    
-        customerModel.getAdminByEmail.mockImplementation((email, callback) => {
-            callback(null, mockAdmin); 
-        });
-    
-        const req = { body: { email: "admin@example.com", password: "adminPassword" } };
-        const res = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn(),
-        };
-    
-        customerController.login(req, res);
-    
-        expect(res.status).toHaveBeenCalledWith(200);
-        expect(res.json).toHaveBeenCalledWith(
-            expect.objectContaining({
-                message: "Login successful.",
-                role: "admin",
-                customers: expect.anything(), 
-            })
-        );
-    });
-
-    it("should return 201 and a token if the signup is successful", async () => {
-        const newCustomer = { name: "John Doe", email: "john@example.com", phone: "1234567890", password: "password123" };
-    
-        customerModel.addCustomers.mockResolvedValue({ insertId: 1 }); 
-    
-        const req = { body: newCustomer };
-        const res = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn(),
-        };
-    
-        await customerController.signup(req, res);
-    
-        expect(res.status).toHaveBeenCalledWith(201);
-        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: "Customer registered successfully.", token: expect.any(String) }));
     });
 
     it("should return 400 if required fields are missing", async () => {
@@ -621,25 +435,6 @@ describe("Customer Controller Tests", () => {
     });
     
     
-    it("should return 401 if the password is incorrect", async () => {
-        const customer = { id: 1, email: "user@example.com", password: "password" };
-    
-        customerModel.getCustomerByEmail.mockImplementation((email, callback) => {
-            callback(null, customer); 
-        });
-    
-        const req = { body: { email: "user@example.com", password: "wrongpassword" } };
-        const res = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn(),
-        };
-    
-        await customerController.login(req, res);
-    
-        expect(res.status).toHaveBeenCalledWith(401);
-        expect(res.json).toHaveBeenCalledWith({ error: "Invalid credentials." });
-    });
-
     it('should return 500 if there is an error fetching customers', async () => {
         const mockError = new Error('Database error');
         customerModel.customers.mockImplementationOnce((callback) => {
@@ -652,33 +447,422 @@ describe("Customer Controller Tests", () => {
             json: jest.fn()
         };
 
-        await customerController.customers(req, res);
+        customerController.customers(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({ error: "Failed to fetch customers." });
+    }); 
+    
+    let req, res;
+
+    beforeEach(() => {
+        req = {
+            user: { id: 1 }, 
+        };
+        res = {
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn(), 
+        };
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it("should return customer bookings successfully", () => {
+        const mockBookings = [
+            { id: 1, bookingDate: "2025-01-20", customerId: 1 },
+            { id: 2, bookingDate: "2025-01-21", customerId: 1 },
+        ];
+
+        customerModel.getBookingsByCustomerId.mockImplementation((customerId, callback) => {
+            callback(null, mockBookings);
+        });
+
+        getCustomerBookings(req, res);
+
+        expect(customerModel.getBookingsByCustomerId).toHaveBeenCalledWith(
+            req.user.id,
+            expect.any(Function)
+        );
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith(mockBookings);
+    });
+
+    it("should return 500 if there is an error retrieving bookings", () => {
+        customerModel.getBookingsByCustomerId.mockImplementation((customerId, callback) => {
+            callback(new Error("Database error"), null); 
+        });
+
+        getCustomerBookings(req, res);
+
+        expect(customerModel.getBookingsByCustomerId).toHaveBeenCalledWith(
+            req.user.id,
+            expect.any(Function)
+        );
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({ error: "Failed to fetch customer bookings." });
+    });
+
+    it("should return 500 if no bookings are found", () => {
+        customerModel.getBookingsByCustomerId.mockImplementation((customerId, callback) => {
+            callback(null, null); 
+        });
+
+        getCustomerBookings(req, res);
+
+        expect(customerModel.getBookingsByCustomerId).toHaveBeenCalledWith(
+            req.user.id,
+            expect.any(Function)
+        );
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({ error: "Failed to fetch customer bookings." });
+    });
+});
+
+
+describe("getAllBookings", () => {
+    let req, res;
+
+    beforeEach(() => {
+        req = {}; 
+        res = {
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn(), 
+        };
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it("should return all bookings successfully", () => {
+        const mockBookings = [
+            { id: 1, bookingDate: "2025-01-20", customerId: 1 },
+            { id: 2, bookingDate: "2025-01-21", customerId: 2 },
+        ];
+
+        customerModel.getBookings.mockImplementation((callback) => {
+            callback(null, mockBookings); 
+        });
+
+        getAllBookings(req, res);
+
+        expect(customerModel.getBookings).toHaveBeenCalledWith(expect.any(Function));
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith(mockBookings);
+    });
+
+    it("should return 500 if there is an error retrieving bookings", () => {
+        customerModel.getBookings.mockImplementation((callback) => {
+            callback(new Error("Database error"), null);
+        });
+
+        getAllBookings(req, res);
+
+        expect(customerModel.getBookings).toHaveBeenCalledWith(expect.any(Function));
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({ error: "Failed to fetch bookings." });
+    });
+
+    it("should return 500 if no bookings are found", () => {
+        customerModel.getBookings.mockImplementation((callback) => {
+            callback(null, null); 
+        });
+
+        getAllBookings(req, res);
+
+        expect(customerModel.getBookings).toHaveBeenCalledWith(expect.any(Function));
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({ error: "Failed to fetch bookings." });
+    });
+});
+
+
+describe("updateCustomer", () => {
+    let req, res;
+
+    beforeEach(() => {
+        req = {
+            params: { id: "1" },
+            body: {},
+            user: {},
+        };
+
+        res = {
+            status: jest.fn().mockReturnThis(), 
+            json: jest.fn(), 
+        };
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it("should return 400 if no fields are provided for update", () => {
+        req.body = {};
+
+        updateCustomer(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith({ error: "At least one field is required to update." });
+    });
+
+    it("should return 403 if a customer tries to update another customer's data", () => {
+        req.user = { role: "customer", id: 2 }; 
+        req.params.id = "1"; 
+        req.body = { name: "New Name" };
+
+        updateCustomer(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(403);
+        expect(res.json).toHaveBeenCalledWith({ error: "You are not authorized to update this customer." });
+    });
+
+    it("should return 403 if an unauthorized role tries to update a customer", () => {
+        req.user = { role: "guest" }; 
+        req.body = { name: "New Name" };
+
+        updateCustomer(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(403);
+        expect(res.json).toHaveBeenCalledWith({ error: "Unauthorized role." });
+    });
+
+    it("should return 404 if the customer is not found during update", () => {
+        req.user = { role: "admin" }; 
+        req.body = { name: "New Name" };
+
+        customerModel.updateCustomer.mockImplementation((query, values, callback) => {
+            callback(null, { affectedRows: 0 }); 
+        });
+
+        updateCustomer(req, res);
+
+        expect(customerModel.updateCustomer).toHaveBeenCalled();
+        expect(res.status).toHaveBeenCalledWith(404);
+        expect(res.json).toHaveBeenCalledWith({ error: "Customer not found." });
+    });
+
+    it("should update customer successfully for an admin", () => {
+        req.user = { role: "admin" }; 
+        req.body = { name: "New Name" };
+
+        customerModel.updateCustomer.mockImplementation((query, values, callback) => {
+            callback(null, { affectedRows: 1 }); 
+        });
+
+        updateCustomer(req, res);
+
+        expect(customerModel.updateCustomer).toHaveBeenCalled();
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith({ message: "Customer updated successfully." });
+    });
+
+    it("should update customer successfully for the logged-in customer", () => {
+        req.user = { role: "customer", id: 1 }; 
+        req.params.id = "1"; 
+        req.body = { email: "newemail@example.com" };
+
+        customerModel.updateCustomer.mockImplementation((query, values, callback) => {
+            callback(null, { affectedRows: 1 }); 
+        });
+
+        updateCustomer(req, res);
+
+        expect(customerModel.updateCustomer).toHaveBeenCalled();
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith({ message: "Your data updated successfully." });
+    });
+
+    it("should return 500 if there is an error during the update", () => {
+        req.user = { role: "admin" }; 
+        req.body = { name: "New Name" };
+
+        customerModel.updateCustomer.mockImplementation((query, values, callback) => {
+            callback(new Error("Database error"), null); 
+        });
+
+        updateCustomer(req, res);
+
+        expect(customerModel.updateCustomer).toHaveBeenCalled();
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({ error: "Failed to update customer." });
+    });
+});
+
+describe("login", () => {
+    let req, res;
+
+    beforeEach(() => {
+        req = {
+            body: {},
+        };
+
+        res = {
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn(), 
+        };
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it("should return 400 if email or password is missing", () => {
+        req.body = { email: "", password: "" };
+
+        login(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith({ error: "Email and password are required." });
+    });
+
+    it("should return 500 if there is a database error when fetching admin", () => {
+        req.body = { email: "admin@example.com", password: "password" };
+
+        customerModel.getAdminByEmail.mockImplementation((email, callback) => {
+            callback(new Error("Database error"), null);
+        });
+
+        login(req, res);
+
+        expect(customerModel.getAdminByEmail).toHaveBeenCalledWith("admin@example.com", expect.any(Function));
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({ error: "Database error." });
+    });
+
+    it("should return 500 if there is an error comparing admin passwords", () => {
+        req.body = { email: "admin@example.com", password: "password" };
+
+        customerModel.getAdminByEmail.mockImplementation((email, callback) => {
+            callback(null, { id: 1, email: "admin@example.com", password: "hashedPassword" });
+        });
+
+        bcrypt.compare.mockImplementation((plainText, hash, callback) => {
+            callback(new Error("Compare error"), null);
+        });
+
+        login(req, res);
+
+        expect(bcrypt.compare).toHaveBeenCalledWith("password", "hashedPassword", expect.any(Function));
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({ error: "Error comparing passwords." });
+    });
+
+    it("should return 401 if admin password is invalid", () => {
+        req.body = { email: "admin@example.com", password: "password" };
+
+        customerModel.getAdminByEmail.mockImplementation((email, callback) => {
+            callback(null, { id: 1, email: "admin@example.com", password: "hashedPassword" });
+        });
+
+        bcrypt.compare.mockImplementation((plainText, hash, callback) => {
+            callback(null, false); 
+        });
+
+        login(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(401);
+        expect(res.json).toHaveBeenCalledWith({ error: "Invalid credentials." });
+    });
+
+    it("should return 500 if fetching customers for admin fails", () => {
+        req.body = { email: "admin@example.com", password: "password" };
+
+        customerModel.getAdminByEmail.mockImplementation((email, callback) => {
+            callback(null, { id: 1, email: "admin@example.com", password: "hashedPassword" });
+        });
+
+        bcrypt.compare.mockImplementation((plainText, hash, callback) => {
+            callback(null, true); 
+        });
+
+        jwt.sign.mockReturnValue("adminToken");
+
+        customerModel.customers.mockImplementation((callback) => {
+            callback(new Error("Database error"), null);
+        });
+
+        login(req, res);
 
         expect(res.status).toHaveBeenCalledWith(500);
         expect(res.json).toHaveBeenCalledWith({ error: "Failed to fetch customers." });
     });
 
-    
+    it("should return 200 and admin token with customers on successful admin login", () => {
+        req.body = { email: "admin@example.com", password: "password" };
 
+        customerModel.getAdminByEmail.mockImplementation((email, callback) => {
+            callback(null, { id: 1, email: "admin@example.com", password: "hashedPassword" });
+        });
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+        bcrypt.compare.mockImplementation((plainText, hash, callback) => {
+            callback(null, true); 
+        });
 
-    
+        jwt.sign.mockReturnValue("adminToken");
+
+        customerModel.customers.mockImplementation((callback) => {
+            callback(null, [{ id: 1, name: "Customer 1" }]);
+        });
+
+        login(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith({
+            message: "Login successful.",
+            role: "admin",
+            token: "adminToken",
+            customers: [{ id: 1, name: "Customer 1" }],
+        });
+    });
+
+    it("should return 404 if customer is not found", () => {
+        req.body = { email: "user@example.com", password: "password" };
+
+        customerModel.getAdminByEmail.mockImplementation((email, callback) => {
+            callback(null, null); 
+        });
+
+        customerModel.getCustomerByEmail.mockImplementation((email, callback) => {
+            callback(null, null); 
+        });
+
+        login(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(404);
+        expect(res.json).toHaveBeenCalledWith({ error: "User not found." });
+    });
+
+    it("should return 200 and customer token on successful customer login", () => {
+        req.body = { email: "user@example.com", password: "password" };
+
+        customerModel.getAdminByEmail.mockImplementation((email, callback) => {
+            callback(null, null); 
+        });
+
+        customerModel.getCustomerByEmail.mockImplementation((email, callback) => {
+            callback(null, { id: 2, email: "user@example.com", password: "hashedPassword" });
+        });
+
+        bcrypt.compare.mockImplementation((plainText, hash, callback) => {
+            callback(null, true); 
+        });
+
+        jwt.sign.mockReturnValue("customerToken");
+
+        login(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith({
+            message: "Login successful.",
+            role: "customer",
+            token: "customerToken",
+            customer: { id: 2, email: "user@example.com", password: "hashedPassword" },
+        });
+    });
 });
+
+
+

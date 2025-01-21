@@ -13,8 +13,6 @@ connection.connect();
 const closeConnection = () => {
     if (connection) {
         connection.end();
-    }
-};
-
+    }};
 
 module.exports = { connection, closeConnection };

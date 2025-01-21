@@ -2,6 +2,14 @@ const mysql = require("mysql");
 const customerModel = require("../models/customerModel");
 const { closeConnection } = require("../database/connection");
 const { connection } = require("../database/connection");
+const { getBookingsByCustomerId } = require("../models/customerModel");
+const { getBookings } = require("../models/customerModel");
+
+jest.mock("../database/connection", () => ({
+    connection: {
+        query: jest.fn(),
+    },
+}));
 
 jest.mock("../database/connection", () => ({
   connection: {
@@ -51,7 +59,7 @@ const createBooking = (bookingData) => {
 };
 
 afterAll(async () => {
-  await closeConnection();
+  closeConnection();
 });
 
 describe("Customer Model Tests", () => {
@@ -772,4 +780,83 @@ describe("Customer Model Tests", () => {
       "An unknown error occurred"
     );
   });
+});
+
+
+
+describe("getBookingsByCustomerId", () => {
+    it("should retrieve bookings for the specified customer ID", (done) => {
+        const mockCustomerId = 1;
+        const mockBookings = [
+            { id: 101, customer_id: mockCustomerId, room: "A101", status: "confirmed" },
+            { id: 102, customer_id: mockCustomerId, room: "B202", status: "checked out" },
+        ];
+
+        connection.query.mockImplementation((query, values, callback) => {
+            expect(query).toBe("SELECT * FROM booking WHERE customer_id = ?");
+            expect(values).toEqual([mockCustomerId]);
+            callback(null, mockBookings);
+        });
+
+        getBookingsByCustomerId(mockCustomerId, (err, results) => {
+            expect(err).toBeNull(); 
+            expect(results).toEqual(mockBookings); 
+            done();
+        });
+    });
+
+    it("should handle database errors", (done) => {
+        const mockCustomerId = 1;
+        const mockError = new Error("Database error");
+
+        connection.query.mockImplementation((query, values, callback) => {
+            expect(query).toBe("SELECT * FROM booking WHERE customer_id = ?");
+            expect(values).toEqual([mockCustomerId]);
+            callback(mockError, null);
+        });
+
+        getBookingsByCustomerId(mockCustomerId, (err, results) => {
+            expect(err).toEqual(mockError); 
+            expect(results).toBeNull(); 
+            done(); 
+        });
+    });
+});
+
+describe("getBookings", () => {
+    it("should retrieve all bookings successfully", (done) => {
+        const mockBookings = [
+            { id: 101, customer_id: 1, room: "A101", status: "confirmed" },
+            { id: 102, customer_id: 2, room: "B202", status: "checked out" },
+        ];
+
+        connection.query.mockImplementation((query, callback) => {
+            expect(query).toBe("SELECT * FROM booking");
+            callback(null, mockBookings);
+        });
+
+        
+        getBookings((err, results) => {
+            expect(err).toBeNull(); 
+            expect(results).toEqual(mockBookings); 
+            done(); 
+        });
+    });
+
+    it("should handle database errors", (done) => {
+        const mockError = new Error("Database error");
+
+        
+        connection.query.mockImplementation((query, callback) => {
+            expect(query).toBe("SELECT * FROM booking");
+            callback(mockError, null);
+        });
+
+        
+        getBookings((err, results) => {
+            expect(err).toEqual(mockError); 
+            expect(results).toBeNull(); 
+            done(); 
+        });
+    });
 });
